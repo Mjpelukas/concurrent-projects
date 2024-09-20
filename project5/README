@@ -1,0 +1,110 @@
+
+        Questions:
+1. The logic of your program, why does your program work? 
+2. Why every boat load has exactly three persons and is safe?
+3. Clearly state your policy of assembling a safe boat load. 
+4. Why do CannibalArrives(), MissionaryArrives(), BoatReady()
+ and BoatDone() work properly? More precisely, explain that why your 
+ version of CannibalArrives(), MissionaryArrives(), BoatReady() and 
+ BoatDone() canalways guarantee:
+    a) No one can get off the boat before a crossing completes. 
+    b)While the boat is crossing the river, no one can jump on and get off 
+    the boat. 
+    c) Everyone on the boat has been registered properly. More precisely, 
+    no one who was not registered can be on the boat. 
+    d) No one who is on the boat for a crossing can come back and register 
+    for another crossing before the current boat load completes.
+                
+                
+                Responses:
+Question 1: The logic of my program is that in thread main it makes a 
+boatThread and begins it. It then makes a bunch of threads for cannibals 
+and missionaries based on the values given from the command line, and these 
+created threads all are began and then run their ThreadFunc() which is a loop 
+that continually calls MissionaryArrives() and CannibalArrives() if it is a 
+missionary or cannibal thread respectively this will make it so that they 
+will enter the boat monitor and immidiately get put in a waiting set trying 
+to get onto the boat and increment the respective wainting counter in the 
+mounitor. If they are picked to ride on the boat they will be released and 
+continue thorugh the ****Arives() function and will increment the number of 
+passengers in the monitor and the number of cannibals if it is a cannibal, 
+then it will take a seats on the boat by grabbing a spot in the seats[] 
+array. if it is the third passenger it will signal that boatloading is done 
+and the boat will crosssing river. All of these threads wil waits until boat 
+has crossed the river on the BoatCrossing condition. After that when the 
+boat-monitor releases theses threads they give up the monitor. Now explaining 
+the boatThread it calls BoatReady() from the monitor which then calls the 
+FillSeats() function in the monitor to randomly select a composition of 
+passengers to ride in the boat if the number of missionaries and cannibals is 
+available, and the program basically tries this until enough of the 
+missionary and cannibal threads arrive for it to work, FillSeats() then 
+signals the number of cannibals and missionaries that the composition it 
+selected need to resume. This allows them to grab their seats as said before 
+and allows BoatReady() to continue to the next step where if somehow there is 
+less than three passengers it will wait on BoatLoading condition, but this 
+gets fixed when the third passenger finally gets in and signals BoatLoading() 
+it increases the tripNumber, then it moves the ids of the passengers from the 
+seats array into passengers array it prints out what passengers were selected 
+for that trip, then it gives up the monitor and returns the passenger array 
+pointer to the BoatThread ThreadFunc() where it prints about hte ride and 
+then calls BoatDone() from the monitor. BoatDone() signals BoatCrossing 
+condition three times so all passengers can get off the boat and continue 
+their threads where they lower their respective count values. Before that 
+happens though, If the trip number is greater than or equal to maxTrips it 
+will return 1 to BoatThread, and if not it returns 0, in the case that it 
+returns 0, the BoatThread will loop through again. If it returns 1, then the 
+BoatThread will exit and the driver code in thread-main will terminate the 
+program. As the only thing holding it back from terminating the program after 
+initiating the threads was having BoatThread join. But this last part is more 
+or less a failsafe in case the exit() in BoatDone() that is called once it 
+prints the final messages doesn't terminate the program somehow.
+
+
+Question 2: The boat load has exactly three persons and is safe because when
+boatThread calls BoatReady() the function starts with a while loop where it 
+then calls then calls the FillSeats() function in the monitor and cannot exit 
+the loop until it successfully fills the seats in that function (if FillSeats 
+returns 1). It exits the monitor when it repeats the loop and begins it again 
+just before calling FillSeats() so that other threads can enter the monitor. 
+FillSeats() randomlys select a composition of passengers to ride in the boat 
+if the number of missionaries and cannibals are available for that 
+configuration, and if they are not then  it will try the other two possible 
+configurations before finding one that works or returning 0 and doing 
+nothing. So the program basically tries this until enough of the missionary 
+and cannibal threads arrive for it to work. When FillSeats() finds a 
+configuration that will work it then signals the number of cannibals and 
+missionaries that the composition it selected need to resume. This allows 
+them to grab their seats as said before. This part of them grabbing their 
+seats is safe because they are all in monitors so they go through one at a 
+time and grab their seat and then wait on BoatCrossing condition in 
+CannibalArrives() and MissionaryArrives() respectively which then allows the 
+next passenger to do the same. Anyways this allows BoatReady() to continue to 
+the next step where if somehow there is less than three passengers it will 
+wait on BoatLoading condition, but this gets fixed when the third passenger 
+that was signalled finally gets in (puts their ID in the seat[] array) it 
+calls signal on the boatloading condition and allows the boat ride to start.
+
+
+Question 3: My policy for assembling a safe boat load is that if the boat 
+calls that it is ready, then a boat load of either All Cannibal, All 
+Missionaries, or One Cannibal and Two missionaries is created using the 
+Missionaries and Cannibals that are in the waiting set (waiting on the 
+condition MissionaryWait and Cannibal Wait respectively) if there are enough 
+Cannibals or Missionaries waiting for the configuration randomly picked then 
+it will assemble that boat load. By signaling the appropriate amount of time. 
+For Three Cannibals it calls CannibalWait->Signal() three times. For Three 
+Missionaries it calls MissionaryWait->Signal() three times. And for One 
+Cannibal and Two Missionaries it calls MissionaryWait->Signal() twice and it 
+then calls CannibalWait->Signal() once, and returns 1 so that BoatRead() can 
+continue as described in the previous question. 
+
+Question 4:
+
+Part a: Nobody can get off the boat before the passage completes because all of the passengers wait on a condition BoatCrossing once they get on the boat, blocking the MissionaryArrives() and CannibalArrives() for the passenger and this condition is only signalled in BoatDone() which is called when the boat ride completes. Where it then does BoatCrossing->Signal() three times letting them officially get off the boat.
+
+Part b: Part B explains why nobody can get off the boat while it is crossing the river, but the reason why nobody can get on the boat while it is crossing is that MisssionaryArives() and CannibalArrive() both start by increaseing the count of wating Missionaries and Cannibals respectively and then wait until their condition variable MissionryWait and CannibalWait respectively are called by FindSeats() which only lets out the amount that are going to ride on the boat. And FindSeats only runs in BoatReady() before the boat starts to cross the river, and BoatDone() which officially ends the river crossing will be called in the BoatThread before BoatReady() is called again, so this means it is impossible for more passengers to get on the boat while it is in the Middle of crossing. 
+
+Part c: Everyone on the boat must be registered because the part of the code that places a passenger on the boat for that ride is in MissionaryArrives() and CannibalArrives() and that code only runs once before the have to register agains after crossing the river, so it would be impossible for somebody on the boat to be on it because seats[] is only changed there, and in the case of leftovers from the last ride, when the passengers are signalled in DoatDone() they wake up in a monitor so they have to give it up before any waiting threads can enter a the monitor. So these threads all reduce the passengerCount by 1 (and Cannibal Count by 1) before giving up the monitor. This gets both of those counts back to zero by the end. And because it is a Hoare style monitor every time it does BoatCrossing->Signal() in BoatDone() it will give up the monitor to the passenger it just signaled so they will always be off the list and the counts will be at zero before BoatDone() finishes, thus BoatThread can't accidentally keep them on the boat becuase it needs BoatDone() to finish before it can loop again and call BoatReady() once more.
+
+Part d: No one who is on the boat for a crossing can come back and register 
+for another crossing before the current boat load completes because all of the passengers on the Boat are waiting on the condition BoatCrossing, which will only be signalled, and letting them register again, once BoatDone() is called by the BoatThread, which is done after the boat load completes. 

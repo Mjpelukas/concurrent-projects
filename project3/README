@@ -1,0 +1,65 @@
+
+        Questions:
+1. Are there any race conditions in this prefix sum computation? Why? 
+2. Can the result of x[i]+x[i-2^(h-1)] of run h be saved back to x[i]? 
+Explain your findings as clearly as possible. 
+3. The main() creates n threads in each iteration and wait for them to 
+complete. There is a significant amount of time in creating and joining 
+threads. If you are allowed to use extra variables/arrays and busy 
+waiting, can you just create nthreads and let them do all the work 
+without the use of a temporary array B[*,*]? Suggest a solution and 
+discuss its correctness. 
+4. Prove rigorously (proof by induction, not by example) that this 
+algorithm does compute the prefix sum correctly. 
+                
+                
+                Responses:
+Question 1: There are no race conditions in the prefix sum computation.
+This is because each thread of an iteration pulls from a previous iteration's
+row of the array and then writes into into their own index of the array.
+All threads finish for that iteration before any threads are created for the 
+next iteration. In this way there are never any times where a thread from the 
+next iteration is trying to read from a spot in the row of the current 
+iteration before the thread of the earlier iteration completes. So basically
+it is that there are never any threads that will read a space that hasn't
+been written to properly because the thread cannot start unless the entire
+row that it is looking at has been written to in the previous run.
+
+
+Question 2: The result of x[i]+x[i-2^(h-1)] of run h cannot be saved back to 
+x[i]. This is because it could cause a race condition where the other threads
+may end up reading the result that was put into x[i] instead of the original 
+value that was there in x[i] they were trying to read and it would mess up 
+their own calculated result.
+
+
+Question 3: A solution that I would suggest is that with busy waiting you 
+could let them do all the work without the use of a temporary array B[*,*].
+You can do this by having each thread know the total number of threads when 
+they are initialized, and give them all access to another two global variables
+and a global temporary array where each thread would write the value that they
+calculated. The threads run in a loop that goes for the h runs needed, and each
+time they finish that run they can write their value to the temporary array,
+and increment the global endcounter by 1. And they would then enter busy
+waiting until the global endcounter equals h*n threads so for run 2 and 16 
+threads it would need to see 32 to continue. And then it would write the temp 
+array onto the x array. Then it would increment global begincounter by 1 and 
+enter busy waiting until it reaches the same condition with begincounter like 
+it did with endcounter. Then the threads can loop and begin their next run. In
+terms of correctness there should be no race conditions, but this would 
+require more global variables, and more waiting compared to before because 
+busy waiting could have threads keep checking the condition while waiting on 
+a thread to finish. Overall it would probably be slower. 
+
+Question 4: P(n) = x[i] - x[i-2^(n-1)] to get the remainder after intermediate
+sum, actual formula is x[i] + x[i-2^(n-1)]
+Assume an array of values where i is an index and n is the run.
+n is bound by the half the number of total in the array.  
+Basis: when n=1 P(n) = x[i] - x[i-2^(1-1)] = x[i] - x[i-0] = x[i]-x[i] = 0
+When removing itself from the sum at the first iteration we get nothing.  
+Inductive hypothesis: x[i] - x[i-2^(k-1)] will add an additional term each
+time there is an iteraion.
+inductive Step : x[i] - x[i-2^(k+1-1)]
+                x[i] - x[i-2^(k)]
+x[i] - x[i-2^(k-1)] and x[i] - x[i-2^(k)] shows different terms with each
+iteration thus proving the inductive hypothesis.

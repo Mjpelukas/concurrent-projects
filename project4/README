@@ -1,0 +1,104 @@
+                        Questions:
+
+1. At any time, there are no more than m baby eagles eating.
+2. A baby eagle must wait when he wants to eat but has no free feeding pot
+and/or all free feeding pots are all empty.
+3. If there is a non-empty feeding pot, a hungry and ready-to-eat baby eagle
+can eat.
+4. No hungry baby eagle will eat using an empty feeding pot.
+5. At any time, a feeding pot can only be used by one eating baby eagle.
+6. Only one baby eagle among all baby eagles who want to eat can wake up
+the mother eagle.
+7. The mother eagle does not run until a baby eagle wakes her up.
+8. While the mother eagle is preparing food, no baby eagle can wake up the
+mother again until the mother goes back to take a nap.
+9. Before all m feeding pots are filled, no hungry baby eagle can eat.
+10.Once the feeding pots are refilled, the mother eagle must allow baby
+eagles to eat. Then, she goes back to sleep.
+11. You program terminates gracefully. More precisely, if t feedings are
+needed, then your program cannot terminate right after the mother eagle
+refills the feeding pots t times. Instead, your program must wait until all
+feeding pots become empty, even though there may be baby eagles
+waiting for food. How do you implement this requirement? 
+
+
+        RESPONSES:
+
+Question 1: There are no more than m babys eating because in ready_to_eat()
+there is a mutex that has each baby select a pot and increase the pot Counter
+and then gives up the mutex, but when the counter is equal to the total number
+of pots then the baby goes to an if statement where they call FirstWaker->Wait
+so only the first can go through where it waits for the rest to eat first and
+the mom to be asleep to wake her up. The rest of the babys that have no full
+pots that are free will be stuck on the FirstWaker sempahor.
+
+Question 2: Like I said in the last Question, any babys without a free-full
+pot to claim will be blocked by the FirstWaker sempahor if they aren't the 
+first to pass it, and then it is sent through ready_to_eat again. This makes
+it wait until the pots are full again.  
+
+Question 3: The baby will always grab the non-empty free feeding pot because
+a baby eagle will always be inside ready_to_eat() until it gets to eat. and
+in the case that it got put into the if statement where potCounter is equal 
+to the total number it will run it back through ready_to_eat() before return
+Each time a baby claims a pot or the waker gets mom to get more food, both of
+the semaphors FindPot and WaitEat will be signaled, allowing another hungry
+baby to pick a pot to go eat.
+
+Question 4: I use a mutex lock mu and a global counter potCounter. Each baby
+gets the mutex lock and then picks a pot based on the global potCounter then
+it increments the potCounter gives up the mutex so no two babys can read or 
+write to potCounter at the same time making them unable to go backwards and
+use an empty pot that was already ate, potCounter only gets put back to 0
+when mother eagle calls Food_ready(), and at that point all of the feeding 
+pots will be full again.
+
+Question 5:  I use a mutex lock mu and a global counter potCounter. Each baby
+gets the mutex lock and then picks a pot based on the global potCounter then
+it increments the potCounter gives up the mutex so no two babys can read or 
+write to potCounter at the same time making them unable to go backwards and
+eat from the same pot as another one, and because potCounter only goes back to
+0 when when mother eagle calls Food_ready(), and at that point all of the
+feeding pots will be full again. And that can only happen once the first
+hungry baby to not have a pot sees that all other babys are done eating so
+the mom will not be awake to call Food_ready until all babys are done eating
+all of the pots so a baby could never eat from the same pot as another baby.
+
+Question 6: This is acomplished by having a semaphor of FirstWaker that makes
+sure that only the first baby that tries to wake mom can access the code that
+calls wake_mom() and all the subsequent ones for that feeding will not do so
+because once the subsequents are woken up they will check if the potCounter is 
+still equal to the totalPots and if it is not they will not run the code to 
+wake up mom and will just run ready_to_eat() again.
+
+Question 7: The mom does not run until a baby wakes her up because at the end
+of goto_sleep() MomSleep->Wait() is called and this keeps it in the waiting
+set until the waking baby calls wake_mom() that has MomSleep->Signal() in it.
+
+Question 8: This is acomplished by having a semaphor of FirstWaker that makes
+sure that only the first baby that tries to wake mom can access the code that
+calls wake_mom() and all the subsequent ones for that feeding will not do so
+call all of the babys that wanted to wake mom including the one that did will
+call ready_to_eat() again and this makes it so that the mother can only be
+woke up after they take another nap because the signal for MomAwake is only in
+goto_sleep(), and before the waker can call wake_mom() it has to get through
+the MomAwake semaphor with the MomAwake->Wait() statement.
+
+Question 9: No hungry baby can eat before the pots are filled because the
+semaphor that allows the babys to access the bulk of ready_to_eat() is after
+a wait on the semaphors FindPot and WaitEat, that will only start being 
+signalled once Food_ready is called by Mom.
+
+Question 10: With Food_ready () The Pot Counter is reset and Mother Eagle 
+allows the Baby that woke it up to eat and they will let the rest of them eat,
+so they allow the Baby Eagles to Sleep before she calls gotosleep() with 
+another loop of the thread.
+
+Question 11: I implement this by having the mother eagle go do the main loop 
+for the given number t of feedings then it waits on a semaphore BabyEating for 
+for each food pot, and Babys still eating for the final feeding wil call 
+finish_eating() and signal the sempahore and they must do this for all of the
+total feeding pots mother eaglue filled before Mother Eagle can continue to 
+close the game and output the text for that and then Exit the thread. 
+Exits happen to babys in ready_to_eat() when the feedingCounter is equal to 
+the maxFeedings and PotCounter is equal to the total pots.

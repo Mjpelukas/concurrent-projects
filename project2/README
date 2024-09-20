@@ -1,0 +1,158 @@
+                        Questions:
+                
+1. The logic of your program
+2. Why does your program work?
+3. Explain the allocation and use of each shared memory segment.
+4. Are there potential race conditions (i.e., processes use and update a 
+shared data item concurrently) in your program and
+in the program specification?
+5. How do you construct an argument list that is passed from program
+ main to program qsort?
+6. How do you construct an argument list that is passed from program
+ main to program merge?
+
+
+                        Responses:
+
+Question 1: My program starts by making the keys in main and then creating the
+shared memory of segments for the four arrays I will be using:'a', 'x', 'y', 
+and 'z' where the first three are the givens from the input and 'z' is the 
+output array from merge sort. Then Icreate two forks and follow the pattern 
+outlined in Question 5 and 6 to make the arguement lists for qsort and merge 
+respectively and run execvp for one child using the qsort argument list and
+run execvp for the other child withthe merge arguement list. The parent
+process waits until both of those childs terminate and then it deallocates the
+shared memory segments and exits itself. For qsort my idea is to get the
+inputs from the command line arguements and allocate to the shared memory
+segment for 'a' and then perform the step of qsort where you take a pivot
+index in the partition and swaps elements until everything left of the pivot
+is smaller than the pivot and everything to the right is larger. It does this 
+by having two numbers that start from the left and right respectively, with l 
+and r. l goes right in the array until it finds an element larger than the 
+pivot and then r goes left from end of the array until it finds a number 
+smaller than the pivot or it reaches the left index. If the value of l is 
+smaller than value of r the two are swapped. And this continues until l is no 
+longer smaller than r. Then it swaps the pivot with the final r and returns 
+the value of r as the index of the pivot for main to use to spawn children it 
+then creates children, one if the range left of the pivot exists that will 
+have their left be the left of the parent and the right will be the index of 
+the pivot - 1, and one if the range right of the pivot exists where the left 
+will be the the parent waits until all things are sorted and all children are 
+terminated and then exits and this cascades until the very first parent 
+terminates. Merge works because the inital process a child process for each 
+element of the x[] and y[] arrays that handles the single element of their 
+array only checks against the other given array and writes to the output array
+once it knows where it stands in the other array because the array it comes 
+from is sorted. It runs the modified binary search algorith that returns the 
+index the element it is checking for would be placed at if it were to be in 
+the other array so it can do: so it can do:
+z[index + binarySearch(y, 0, n - 1, x[index])] = x[index]; for x elements and
+z[index + binarySearch(x, 0, m - 1, y[index])] = y[index]; for y elements and
+that will give the placement in the output array. After all of the elements 
+are placed in the output array the inital merge.c process can terminate.
+
+
+Question 2: In main.c all of the memory segments are allocated the same way. 
+First a key is generated for each of the memory segments using ftok("./", '$')
+where $ is replaced with either 'a', 'x', 'y', or 'z' depending on which
+segment of memory that I am trying to use. In main I use the command: 
+ShmID = shmget(key, length * sizeof(int),IPC_CREAT | 0666); to create the four
+shared memory segments that I use in the program for when creating the in main
+I then attach the memory segment using arr = (int *) shmat(ShmID, NULL, 0);
+and ShmID, key, length, and arr are all changed to be specific to the array
+that the shared memory segment will store, be it: 'a', 'x', 'y', or 'z' I use
+the naming convention 'amid', 'akey', 'k', and 'a' respectively. So they all
+hold the arrays that were given in the input and 'z' holds the output array
+from merge. The 'a' segment is used in qsort and 'x', 'y', and 'z' segments
+are all used in merge. In merge and qsort I use a similar process where I use:
+key_t akey = ftok("./", 'a'); to get the key and then I use
+amid = shmget(akey, k * sizeof(int), 0666); and a = (int*)shmat(amid, NULL, 0)
+to attatch the memory segements in merge and qsort, obviously changing the
+'amid', 'akey', 'k' and 'a' to match the particular memory segment. Then I
+create two forks and follow the pattern outlined in Question 5 and 6 to make
+the arguement lists for qsort and merge respectively and run execvp for one
+child using the qsort argument list and run execvp for the other child with
+the merge arguement list. The parent process waits until both of those childs
+terminate and then it deallocates the memory and terminates itself. 
+In qsort.c the process works because after the process spawned from main runs
+the sorter function it spawns children, one if the range left of the pivot
+exists and one if the range right of the pivot exists and then they run as if
+they were the initial qsort as they are created with execvp. But this works as
+it basically runs the atomic non-concurrent version of qsort where each child
+process is running the swapping and partitioning sections of the algorithm and
+then instead of the qsort function recursively calling itself to sort the
+parition to the left of the pivot and the partition to the right when the
+function is ran, my program creates two child processes to deal with the left
+and right partitions respectively. Merge works because each child process that
+handles the single element of their array only checks against the other given
+array and writes to the output array once it knows where it stands in the
+other array because the array it comes from is sorted. It runs the modified
+binary search algorith that returns the index the element it is checking for
+would be placed at if it were to be in the other array so it can do:  
+z[index + binarySearch(y, 0, n - 1, x[index])] = x[index]; for x elements
+z[index + binarySearch(x, 0, m - 1, y[index])] = y[index]; for y elements and
+that will give the placement in the output array
+
+
+Question 3: All of the memory segments are allocated the same way. First a key
+is generated for each of the memory segments using ftok("./", '$') where $ is
+replaced with either 'a', 'x', 'y', or 'z' depending on which segment of
+memory that I am trying to use. In main I use the command: 
+ShmID = shmget(key, length * sizeof(int),IPC_CREAT | 0666); to create the four
+shared memory segments that I use in the program for when creating the in main
+I then attach the memory segment using arr = (int *) shmat(ShmID, NULL, 0);
+and ShmID, key, length, and arr are all changed to be specific to the array
+that the shared memory segment will store, be it: 'a', 'x', 'y', or 'z' I use
+the naming convention 'amid', 'akey', 'k', and 'a' respectively. So they all
+hold the arrays that were given in the input and 'z' holds the output array
+from merge. The 'a' segment is used in qsort and 'x', 'y', and 'z' segments
+are all used in merge. In merge and qsort I use a similar process where I use:
+key_t akey = ftok("./", 'a'); to get the key and then I use
+amid = shmget(akey, k * sizeof(int), 0666); and a = (int*)shmat(amid, NULL, 0)
+to attatch the memory segements in merge and qsort, obviously changing the
+'amid', 'akey', 'k' and 'a' to match the particular memory segment.
+
+
+Question 4: There are actually not any potential race condtions in the program
+or in thespecification. In qsort the section of memory that is being read or 
+written to is accessed by the parent process and all the work is completed.
+Only then thechild processes that work on the same area of memory are created 
+with and runexecvp() keeping the same property of their parent. The children 
+also work on seperate partitions of that same section the parent worked on so 
+any work done by the processes will never affect another process when it comes
+to qsort. For merge there is no race conditions because each the arrays (x,y) 
+that the child processes read from are never written to and the output array 
+never has a slot written to more than once by the process writing its
+single element in that position. 
+
+
+Question 5: I construct the arguement list that is passed from program main to
+progranm qsort by using a snprintf to build an array of arguements one by one
+in a string array qsortArgs[] where each qsortArgs[n] is equivalent to
+argv[n] in qsort. argv[0] is "merge", argv[1] : Left is the minimum index of
+subarray and will be "0", argv[2] : Right is the maximum index of the subarray
+and will be 'k-1',argv[3] : k is the legnth of the subarray being sorted 'k'. 
+argv[4] is a terminating character.
+I write this all to a string array by using
+        char * qsortArgs[5]= { "qsort","0","","", "\0" }; //qsort, Left, Right, k
+        snprintf(argBuf[0], BUF, "%d", k - 1); //writes the initial right value
+        qsortArgs[2] = argBuf[0];
+        snprintf(argBuf[1], BUF, "%d", k); //writes length of k
+        qsortArgs[3] = argBuf[1]; 
+Basically overwritting the ""s in qsortArgs by setting them to strings I set
+using snfprintf.
+
+
+Question 6: I construct the arguement list that is passed from program main to
+program merge by using a snprintf to build an array of arguements one by one
+in a string array MergeArgs[] where each MergeArgs[n] is equivalent to
+argv[n] in merge. argv[0] is "qsort", argv[1] - is the x length 'm', and
+argv[2] - is the y length 'n'. argv[3] is a terminating character
+I write this all to a string array by using
+        char * mergeArgs[4] = { "merge","","","\0"}; //merge, xlength, ylength
+        snprintf(argBuf[3], BUF, "%d", m); //writes the x length
+        mergeArgs[1] = argBuf[3];
+        snprintf(argBuf[4], BUF, "%d", n); //writes the y length
+        mergeArgs[2] = argBuf[4];
+Basically overwritting the ""s  in mergeArgs by setting them to strings I set
+using snfprintf.
